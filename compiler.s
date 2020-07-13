@@ -1,4 +1,4 @@
-%define T_UNDEFINED 0
+%define T_UNDEFINED 5578
 %define T_VOID 1
 %define T_NIL 2
 %define T_INTEGER 3
@@ -61,7 +61,8 @@
 %define CLOSURE_CODE CDR
 
 %define PVAR(n) qword [rbp+(4+n)*WORD_SIZE]
-	
+%define FVAR(i) [fvar_tbl+i*WORD_SIZE]
+
 %define SOB_UNDEFINED T_UNDEFINED
 %define SOB_NIL T_NIL
 %define SOB_VOID T_VOID
@@ -76,6 +77,12 @@
 	mov %1, qword [malloc_pointer]
 	sub %1, [rsp]
 	add rsp, 8
+%endmacro
+
+%macro MAKE_LITERAL 2
+; Make a literal of type %1 ; followed by the definition %2
+	db %1
+	%2
 %endmacro
 	
 ; Creates a short SOB with the
@@ -100,6 +107,13 @@
 %define MAKE_FLOAT(r,val) MAKE_LONG_VALUE r, val, T_FLOAT
 %define MAKE_CHAR(r,val) MAKE_CHAR_VALUE r, val
 
+%define MAKE_NIL db T_NIL
+%define MAKE_VOID db T_VOID
+%define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val
+%define MAKE_LITERAL_INT(val) MAKE_LITERAL T_INTEGER, dq val
+%define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
+%define MAKE_LITERAL_FLOAT(val) MAKE_LITERAL T_FLOAT, dq val
+
 ; Create a string of length %2
 ; from char %3.
 ; Stores result in register %1
@@ -120,6 +134,30 @@
 %%str_loop_end:
 	pop rcx
 	sub %1, WORD_SIZE+TYPE_SIZE
+%endmacro
+
+%macro MAKE_LITERAL_STRING 1
+	db T_STRING
+	dq (%%end_str - %%str)
+%%str:
+	db %1
+%%end_str:
+%endmacro
+
+%macro MAKE_NEW_LITERAL_STRING 0-*
+	db T_STRING
+	dq (%%end_str - %%str)
+%%str:
+%rep %0
+	db %1
+%rotate 1
+%endrep
+%%end_str:
+%endmacro
+
+%macro MAKE_LITERAL_SYMBOL 1
+	db T_SYMBOL
+	dq %1
 %endmacro
 
 ; Create a vector of length %2
@@ -144,14 +182,23 @@
 	pop rcx
 %endmacro
 
+%macro MAKE_LITERAL_VECTOR 0-*
+	db T_VECTOR
+	dq %0
+%rep %0
+	dq %1
+%rotate 1
+%endrep
+%endmacro
+
 ;;; Creates a SOB with tag %2 
 ;;; from two pointers %3 and %4
 ;;; Stores result in register %1
 %macro MAKE_TWO_WORDS 4 
-        MALLOC %1, TYPE_SIZE+WORD_BYTES*2
+        MALLOC %1, TYPE_SIZE+WORD_SIZE*2
         mov byte [%1], %2
         mov qword [%1+TYPE_SIZE], %3
-        mov qword [%1+TYPE_SIZE+WORD_BYTES], %4
+        mov qword [%1+TYPE_SIZE+WORD_SIZE], %4
 %endmacro
 
 %macro MAKE_WORDS_LIT 3
@@ -169,6 +216,37 @@
 %define MAKE_CLOSURE(r, env, body) \
         MAKE_TWO_WORDS r, T_CLOSURE, env, body
 
+%define FST_PARAM qword [rbp + WORD_SIZE * 4]
+%define PARAM_COUNT qword [rbp + WORD_SIZE * 3]
+%define LEX_ENV qword [rbp + WORD_SIZE * 2]
+
+%macro SHIFT_FRAME 1
+; %1 = size of frame (constant)
+	mov rcx, [rbp + WORD_SIZE * 3]
+	add rcx, 5
+%assign i 1
+%rep %1
+	dec rcx
+	mov r8, [rbp-WORD_SIZE*i]
+	mov [rbp+WORD_SIZE*rcx], r8
+%assign i i+1
+%endrep
+%endmacro
+
+;; Shifts the current frame over the previous one.
+;; assumes no one uses rcx currently (used to get size of new frame)
+;; %1 = size of frame (constant)
+%macro SHIFT_FRAMEe 1
+	mov rcx, qword [rbp + WORD_SIZE * 2]
+	add rcx, 5
+%assign i 1
+%rep %1
+	dec rcx
+	mov r8, [rbp - WORD_SIZE * i]
+	mov[rbp + WORD_SIZE*rcx], r8
+	%assign i i+1
+%endrep
+%endmacro
 	
 extern exit, printf, malloc
 global write_sob, write_sob_if_not_void

@@ -1,0 +1,27 @@
+diff a/compiler.ml b/compiler.ml	(rejected hunks)
+@@ -44,16 +53,20 @@ const_tbl:
+ 
+ ;;; These macro definitions are required for the primitive
+ ;;; definitions in the epilogue to work properly
+-%define SOB_VOID_ADDRESS " ^ get_const_address Void ^ "
+-%define SOB_NIL_ADDRESS " ^ get_const_address (Sexpr Nil) ^ "
+-%define SOB_FALSE_ADDRESS " ^ get_const_address (Sexpr (Bool true)) ^ "
+-%define SOB_TRUE_ADDRESS " ^ get_const_address (Sexpr (Bool false)) ^ "
++%define SOB_VOID_ADDRESS const_tbl+" ^ string_of_int (get_const_address Void) ^ "
++%define SOB_NIL_ADDRESS const_tbl+" ^ string_of_int (get_const_address (Sexpr Nil)) ^ "
++%define SOB_FALSE_ADDRESS const_tbl+" ^ string_of_int (get_const_address (Sexpr (Bool false))) ^ "
++%define SOB_TRUE_ADDRESS const_tbl+" ^ string_of_int (get_const_address (Sexpr (Bool true))) ^ "
++%define sob_void SOB_VOID_ADDRESS
++%define sob_nil SOB_NIL_ADDRESS
++%define sob_false SOB_FALSE_ADDRESS
++%define sob_true SOB_TRUE_ADDRESS
+ 
+ fvar_tbl:
+ " ^ (String.concat "\n" (List.map (fun _ -> "dq T_UNDEFINED") fvars_tbl)) ^ "
+ 
+-global main
+ section .text
++global main
+ main:
+     ;; set up the heap
+     mov rdi, GB(4)

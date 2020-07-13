@@ -87,14 +87,6 @@
 			     (else "this should be an error, but you don't support exceptions")))))
 	(loop lst (make-vector (length lst)) 0)))))
 
-(define vector->list
-  (let ((< <)(vector-ref vector-ref)(cons cons)(vector-length vector-length)(- -))
-    (lambda (vec)
-      (letrec ((loop (lambda (vec lst count)
-		       (cond ((< count 0) lst)
-			     (else (loop vec (cons (vector-ref vec count) lst) (- count 1)))))))
-	(loop vec '() (- (vector-length vec) 1))))))
-
 (define vector
   (let ((list->vector list->vector))
     (lambda x (list->vector x))))
@@ -111,13 +103,24 @@
     (letrec ((loop (lambda x (if (null? x) 1 (* (car x) (apply loop (cdr x)))))))
       loop)))
 
+;(define -
+;  (let ((null? null?)(- -)(+ +)(car car)(apply apply)(length length)(cdr cdr))
+;    (letrec ((loop (lambda x (if (null? x) 0 (- (apply loop (cdr x)) (car x) )))))
+;      (lambda num
+;	(cond ((null? num) "this should be an error, but you don't support exceptions")
+;	      ((= (length num) 1) (- 0 (car num)))
+;	      (else (+ (car num) (apply loop (cdr num)))))))))
+
+;(define loop (lambda x (if (null? x) 0 (- (apply loop (cdr x)) (car x) ))))
+;(loop 1)
+
+; new minus:
 (define -
-  (let ((null? null?)(- -)(+ +)(car car)(apply apply)(length length)(cdr cdr))
-    (letrec ((loop (lambda x (if (null? x) 0 (- (apply loop (cdr x)) (car x) )))))
-      (lambda num
-	(cond ((null? num) "this should be an error, but you don't support exceptions")
-	      ((= (length num) 1) (- 0 (car num)))
-	      (else (+ (car num) (apply loop (cdr num)))))))))
+    (lambda x
+            (if (= (length x) 1) (binsub 0 (car x))
+            (if (= (length x) 2) (binsub (car x) (car (cdr x)))
+                (- (car x) (apply + (cdr x)))))))
+
 
 (define /
   (let ((null? null?)(/ /)(* *)(car car)(apply apply)(length length)(cdr cdr))
@@ -189,3 +192,14 @@
 	 (and (string? x) (string? y) (compare-composite x y string-ref string-length))
 	 (and (vector? x) (vector? y) (compare-composite x y vector-ref vector-length))
 	 (eq? x y))))))
+
+
+(define vector->list
+  (let ((< <)(vector-ref vector-ref)(cons cons)(vector-length vector-length)(- -))
+    (lambda (vec)
+      (letrec ((loop (lambda (vec lst count)
+		       (cond ((< count 0) lst)
+			     (else (loop vec (cons (vector-ref vec count) lst) (- count 1)))))))
+	(loop vec '() (- (vector-length vec) 1))))))
+
+	 (define ohad 3)
